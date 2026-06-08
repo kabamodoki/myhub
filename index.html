@@ -388,6 +388,30 @@ body {
 .bm-card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 7px; }
 .bm-tag { font-size: 10px; padding: 1px 7px; background: var(--accent-glow); color: var(--accent); border-radius: 10px; }
 
+/* ── Drag & Drop ── */
+.bm-card.dragging { opacity: 0.35; border-style: dashed; transform: none; }
+.bm-card.drag-over { border-color: var(--accent); background: var(--accent-glow); box-shadow: 0 0 16px var(--accent-glow); }
+.bm-grid.drag-active .bm-card { cursor: grabbing; }
+.bm-emoji-icon { font-size: 18px; flex-shrink: 0; line-height: 1; width: 18px; text-align: center; }
+
+/* ── Emoji picker ── */
+.emoji-picker-row { display: flex; align-items: center; gap: 6px; }
+.emoji-input-wrap { position: relative; display: flex; align-items: center; gap: 6px; flex: 1; }
+.emoji-preview { font-size: 22px; width: 34px; text-align: center; flex-shrink: 0; }
+.emoji-clear-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+  cursor: pointer; padding: 3px 8px; border-radius: 4px; font-size: 11px;
+  white-space: nowrap; transition: all 0.1s;
+}
+.emoji-clear-btn:hover { border-color: var(--red); color: var(--red); }
+.emoji-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.emoji-preset-btn {
+  width: 30px; height: 30px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 5px; cursor: pointer; font-size: 15px; transition: all 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.emoji-preset-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+
 /* ── Account tab ── */
 .acc-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -630,6 +654,17 @@ tr:hover td { background: var(--card); }
 <div class="modal-overlay" id="bookmarkModal" onclick="onOverlayClick(event,'bookmarkModal')">
   <div class="modal">
     <div class="modal-title" id="bmModalTitle">ブックマークを追加</div>
+    <div class="form-group">
+      <label class="form-label">アイコン <span style="color:var(--text-dim);font-weight:400">（絵文字 or 空欄でファビコン自動取得）</span></label>
+      <div class="emoji-picker-row">
+        <div class="emoji-input-wrap">
+          <span class="emoji-preview" id="bmIconPreview">🔗</span>
+          <input class="form-input" id="bmIcon" type="text" placeholder="絵文字を入力..." oninput="updateIconPreview()" style="flex:1">
+        </div>
+        <button class="emoji-clear-btn" onclick="clearIcon()">クリア</button>
+      </div>
+      <div class="emoji-presets" id="emojiPresets"></div>
+    </div>
     <div class="form-group">
       <label class="form-label">名前 <span style="color:var(--red)">*</span></label>
       <input class="form-input" id="bmName" type="text" placeholder="例: Gmail">
@@ -928,14 +963,25 @@ function renderBookmarks() {
   grid.innerHTML = bms.map(b=>{
     const domain = getDomain(b.url);
     const tags = (b.tags||[]).filter(Boolean).map(t=>`<span class="bm-tag">${esc(t)}</span>`).join('');
-    return `<div class="bm-card" onclick="openUrl('${esc(b.url)}')">
+    const iconHtml = b.customIcon
+      ? `<span class="bm-emoji-icon">${b.customIcon}</span>`
+      : domain
+        ? `<img class="bm-favicon" src="${FAVICON(domain)}" onerror="this.outerHTML='<span class=bm-favicon-placeholder>🔗</span>'">`
+        : '<span class="bm-favicon-placeholder">🔗</span>';
+    return `<div class="bm-card"
+        draggable="true"
+        onclick="openUrl('${esc(b.url)}')"
+        ondragstart="onDragStart(event,'${b.id}')"
+        ondragover="onDragOver(event)"
+        ondragleave="onDragLeave(event)"
+        ondrop="onDrop(event,'${b.id}')"
+        ondragend="onDragEnd(event)">
       <div class="bm-card-actions-overlay">
         <button class="bm-card-action" onclick="event.stopPropagation();openBookmarkModal('${b.id}')">✏</button>
         <button class="bm-card-action del" onclick="event.stopPropagation();deleteBm('${b.id}')">✕</button>
       </div>
       <div class="bm-card-top">
-        ${domain?`<img class="bm-favicon" src="${FAVICON(domain)}" onerror="this.outerHTML='<span class=bm-favicon-placeholder>🔗</span>'">`
-                :'<span class="bm-favicon-placeholder">🔗</span>'}
+        ${iconHtml}
         <span class="bm-card-name">${esc(b.name)}</span>
       </div>
       <div class="bm-card-url">${esc(b.url||'')}</div>
@@ -1025,10 +1071,12 @@ function openBookmarkModal(id) {
   editingBmId = id||null;
   const b = id ? db.bookmarks.find(x=>x.id===id) : null;
   document.getElementById('bmModalTitle').textContent = id?'ブックマークを編集':'ブックマークを追加';
-  document.getElementById('bmName').value = b?.name||'';
-  document.getElementById('bmUrl').value  = b?.url||'';
-  document.getElementById('bmTags').value = (b?.tags||[]).join(', ');
-  document.getElementById('bmMemo').value = b?.memo||'';
+  document.getElementById('bmIcon').value  = b?.customIcon||'';
+  document.getElementById('bmName').value  = b?.name||'';
+  document.getElementById('bmUrl').value   = b?.url||'';
+  document.getElementById('bmTags').value  = (b?.tags||[]).join(', ');
+  document.getElementById('bmMemo').value  = b?.memo||'';
+  updateIconPreview();
   const sel = document.getElementById('bmFolderSel');
   sel.innerHTML = '<option value="">── フォルダなし ──</option>' +
     db.folders.map(f=>`<option value="${f.id}"${(b?b.folderId===f.id:selectedFolderId===f.id)?' selected':''}>${esc(f.name)}</option>`).join('');
@@ -1040,14 +1088,15 @@ function saveBookmark() {
   const name = document.getElementById('bmName').value.trim();
   const url  = document.getElementById('bmUrl').value.trim();
   if (!name||!url) { alert('名前とURLは必須です'); return; }
+  const customIcon = document.getElementById('bmIcon').value.trim();
   const tags     = document.getElementById('bmTags').value.split(',').map(t=>t.trim()).filter(Boolean);
   const memo     = document.getElementById('bmMemo').value.trim();
   const folderId = document.getElementById('bmFolderSel').value||null;
   if (editingBmId) {
     const b = db.bookmarks.find(x=>x.id===editingBmId);
-    if (b) Object.assign(b,{name,url,tags,memo,folderId});
+    if (b) Object.assign(b,{customIcon,name,url,tags,memo,folderId});
   } else {
-    db.bookmarks.push({id:uid(),name,url,tags,memo,folderId});
+    db.bookmarks.push({id:uid(),customIcon,name,url,tags,memo,folderId});
   }
   saveDB(); closeModal('bookmarkModal'); renderAll();
 }
@@ -1144,6 +1193,79 @@ function importData(e) {
 }
 
 // ─────────────────────────────────────
+//  Icon / Emoji picker
+// ─────────────────────────────────────
+const EMOJI_PRESETS = ['🌐','📧','💼','📱','🎮','🎵','📚','🛒','🏠','🔐',
+  '📊','✏️','🎯','🔬','🌍','💡','🗂️','📝','⭐','🔖','🎨','🖥️','📷','🎬','🔧'];
+
+function renderEmojiPresets() {
+  document.getElementById('emojiPresets').innerHTML = EMOJI_PRESETS.map(e=>
+    `<button class="emoji-preset-btn" onclick="setEmoji('${e}')" title="${e}">${e}</button>`
+  ).join('');
+}
+
+function setEmoji(emoji) {
+  document.getElementById('bmIcon').value = emoji;
+  updateIconPreview();
+}
+
+function updateIconPreview() {
+  const val = document.getElementById('bmIcon').value.trim();
+  document.getElementById('bmIconPreview').textContent = val || '🔗';
+}
+
+function clearIcon() {
+  document.getElementById('bmIcon').value = '';
+  updateIconPreview();
+}
+
+// ─────────────────────────────────────
+//  Drag & Drop
+// ─────────────────────────────────────
+let draggedId = null;
+
+function onDragStart(e, id) {
+  draggedId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  setTimeout(() => e.currentTarget.classList.add('dragging'), 0);
+  document.getElementById('bmGrid').classList.add('drag-active');
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedId || draggedId === targetId) return;
+
+  const fromIdx = db.bookmarks.findIndex(b=>b.id===draggedId);
+  const toIdx   = db.bookmarks.findIndex(b=>b.id===targetId);
+  if (fromIdx===-1 || toIdx===-1) return;
+
+  const [item] = db.bookmarks.splice(fromIdx, 1);
+  db.bookmarks.splice(toIdx, 0, item);
+
+  saveDB(); renderBookmarks();
+}
+
+function onDragEnd(e) {
+  draggedId = null;
+  document.querySelectorAll('.bm-card').forEach(c=>{
+    c.classList.remove('dragging','drag-over');
+  });
+  document.getElementById('bmGrid')?.classList.remove('drag-active');
+}
+
+// ─────────────────────────────────────
 //  Keyboard / click outside
 // ─────────────────────────────────────
 document.addEventListener('keydown', e => {
@@ -1171,6 +1293,7 @@ function esc(str) {
 // ─────────────────────────────────────
 applyTheme(currentThemeId);
 renderColorSwatches();
+renderEmojiPresets();
 renderAll();
 </script>
 </body>
