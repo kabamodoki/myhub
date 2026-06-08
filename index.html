@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📝 金子メモ</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0d0d;
+  --surface: #111111;
+  --card: #171717;
+  --card-hover: #1e1e1e;
+  --border: #242424;
+  --border-light: #2e2e2e;
+  --accent: #4488ff;
+  --accent-glow: rgba(68,136,255,0.18);
+  --red: #ff4444;
+  --text: #e2e2e2;
+  --text-sub: #888;
+  --text-dim: #444;
+  --modal-bg: #1c1c1c;
+  --logo-color: #00ffff;
+  --logo-glow: rgba(0,255,255,0.5);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  height: 52px;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--logo-color);
+  text-shadow: 0 0 12px var(--logo-glow);
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+
+.tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--bg);
+  padding: 3px;
+  border-radius: 7px;
+}
+.tab-btn {
+  padding: 5px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tab-btn.active { background: var(--accent); color: #fff; }
+.tab-btn:hover:not(.active) { background: var(--card); color: var(--text); }
+
+.search-wrap {
+  flex: 1;
+  max-width: 380px;
+  position: relative;
+  margin-left: auto;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 13px;
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-dim); }
+
+.header-btns { display: flex; gap: 6px; }
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Theme picker ── */
+.theme-picker-wrap { position: relative; }
+.theme-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: var(--modal-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px;
+  width: 248px;
+  display: none;
+  z-index: 300;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+.theme-dropdown.show { display: block; }
+.theme-dropdown-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+.theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.theme-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.theme-card:hover { border-color: var(--border-light); color: var(--text); background: var(--card); }
+.theme-card.active { border-color: var(--accent); color: var(--text); }
+.theme-preview { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+
+/* ── Main ── */
+.main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+}
+
+/* ── Tab panels ── */
+.tab-panel { display: none; flex: 1; overflow: hidden; }
+.tab-panel.active { display: flex; }
+
+/* ── Bookmark layout ── */
+.bm-layout { flex: 1; display: flex; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-top {
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.folder-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-sub);
+  transition: all 0.1s;
+}
+.folder-all-btn:hover { background: var(--card); color: var(--text); }
+.folder-all-btn.active { background: var(--accent-glow); color: var(--accent); }
+
+.sidebar-folders {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.sidebar-folders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 6px;
+}
+.sidebar-folders-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+}
+.folder-item:hover { background: var(--card); }
+.folder-item.active { background: var(--accent-glow); }
+.folder-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.folder-label { flex: 1; min-width: 0; }
+.folder-name-text {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.folder-item.active .folder-name-text { color: var(--accent); }
+.folder-memo-preview {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.folder-count-badge {
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--border);
+  padding: 1px 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.folder-actions-inline {
+  display: none;
+  gap: 2px;
+  position: absolute;
+  right: 6px;
+}
+.folder-item:hover .folder-actions-inline { display: flex; }
+.folder-item:hover .folder-count-badge { display: none; }
+.folder-action-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+.folder-action-btn:hover { color: var(--text); border-color: var(--border-light); }
+.folder-action-btn.del:hover { color: var(--red); border-color: var(--red); }
+
+/* ── Bookmark content ── */
+.bm-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bm-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.content-title-wrap { min-width: 0; }
+.content-title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.content-folder-memo {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-grid-wrap { flex: 1; overflow-y: auto; padding: 14px 18px; }
+.bm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 10px;
+}
+
+/* Bookmark card */
+.bm-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.bm-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+  transform: translateY(-1px);
+  background: var(--card-hover);
+}
+.bm-card-actions-overlay {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  gap: 3px;
+}
+.bm-card:hover .bm-card-actions-overlay { display: flex; }
+.bm-card-action {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  transition: all 0.1s;
+}
+.bm-card-action:hover { color: var(--text); border-color: var(--border-light); }
+.bm-card-action.del:hover { color: var(--red); border-color: var(--red); }
+
+.bm-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bm-favicon { width: 18px; height: 18px; border-radius: 3px; flex-shrink: 0; }
+.bm-favicon-placeholder {
+  width: 18px; height: 18px; border-radius: 3px; flex-shrink: 0;
+  background: var(--border); display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-dim);
+}
+.bm-card-name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-card-url { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+.bm-card-memo { font-size: 11px; color: var(--text-sub); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bm-card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 7px; }
+.bm-tag { font-size: 10px; padding: 1px 7px; background: var(--accent-glow); color: var(--accent); border-radius: 10px; }
+
+/* ── Account tab ── */
+.acc-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.acc-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.acc-title { font-size: 15px; font-weight: 600; }
+.acc-table-wrap { flex: 1; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+tr:hover td { background: var(--card); }
+
+.acc-site-cell { display: flex; align-items: center; gap: 8px; }
+.acc-favicon { width: 16px; height: 16px; border-radius: 3px; }
+.acc-url-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+.acc-url-link:hover { text-decoration: underline; }
+.acc-type-chip {
+  display: inline-block; padding: 2px 9px; border-radius: 10px;
+  font-size: 11px; font-weight: 500;
+}
+.acc-type-chip.personal { background: rgba(0,232,122,0.1); color: #00cc66; }
+.acc-type-chip.business { background: rgba(68,136,255,0.1); color: #4488ff; }
+.acc-type-chip.other    { background: rgba(170,68,255,0.1); color: #aa44ff; }
+.acc-memo-cell { color: var(--text-sub); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbl-action-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text-sub);
+  cursor: pointer; padding: 3px 9px; border-radius: 4px; font-size: 11px;
+  margin-right: 4px; transition: all 0.1s;
+}
+.tbl-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tbl-action-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+.empty-msg { font-size: 13px; line-height: 1.6; }
+
+/* ── Buttons ── */
+.btn { padding: 6px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-secondary { background: transparent; color: var(--text-sub); border-color: var(--border); }
+.btn-secondary:hover { border-color: var(--border-light); color: var(--text); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+.add-folder-btn {
+  display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 5px;
+  background: transparent; border: 1px dashed var(--border); color: var(--text-dim);
+  cursor: pointer; font-size: 12px; width: 100%; margin-top: 4px; transition: all 0.15s;
+}
+.add-folder-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--modal-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 22px 24px;
+  width: 430px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.96);
+  transition: transform 0.2s;
+}
+.modal-overlay.show .modal { transform: scale(1); }
+.modal-title { font-size: 15px; font-weight: 700; margin-bottom: 18px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+/* Form */
+.form-group { margin-bottom: 13px; }
+.form-label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; font-weight: 500; }
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+.form-input::placeholder, .form-textarea::placeholder { color: var(--text-dim); }
+.form-textarea { resize: vertical; min-height: 70px; }
+.form-select option { background: var(--modal-bg); }
+
+/* Color picker */
+.color-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+.color-swatch {
+  width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.12s;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: #fff; transform: scale(1.1); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <div class="logo">📝 金子メモ</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('bm')">🔖 ブックマーク</button>
+    <button class="tab-btn" onclick="switchTab('acc')">👤 アカウント台帳</button>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" type="text" placeholder="検索..." oninput="renderAll()">
+  </div>
+
+  <div class="header-btns">
+    <!-- Theme picker -->
+    <div class="theme-picker-wrap">
+      <button class="icon-btn" id="themeBtn" onclick="toggleThemePicker()" title="テーマ切替">🎨</button>
+      <div class="theme-dropdown" id="themeDropdown">
+        <div class="theme-dropdown-title">テーマ</div>
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="exportData()" title="JSONでバックアップ">⬇</button>
+    <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="バックアップから復元">⬆</button>
+    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+  </div>
+</header>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- ── Bookmark tab ── -->
+  <div class="tab-panel active" id="bmPanel">
+    <div class="bm-layout">
+      <div class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-section-label">表示</div>
+          <div class="folder-all-btn active" id="folderAllBtn" onclick="selectFolder(null)">
+            📚 すべてのブックマーク
+          </div>
+        </div>
+        <div class="sidebar-folders">
+          <div class="sidebar-folders-header">
+            <span class="sidebar-folders-label">フォルダ</span>
+          </div>
+          <div id="folderList"></div>
+          <button class="add-folder-btn" onclick="openFolderModal()">＋ フォルダを追加</button>
+        </div>
+      </div>
+
+      <div class="bm-content">
+        <div class="bm-content-header">
+          <div class="content-title-wrap">
+            <div class="content-title" id="contentTitle">すべてのブックマーク</div>
+            <div class="content-folder-memo hidden" id="contentMemo"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openBookmarkModal()">＋ ブックマーク追加</button>
+        </div>
+        <div class="bm-grid-wrap">
+          <div class="bm-grid" id="bmGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Account tab ── -->
+  <div class="tab-panel" id="accPanel">
+    <div class="acc-panel">
+      <div class="acc-header">
+        <div class="acc-title">アカウント台帳</div>
+        <button class="btn btn-primary btn-sm" onclick="openAccountModal()">＋ アカウント追加</button>
+      </div>
+      <div class="acc-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>サイト</th><th>URL</th><th>アカウント名</th>
+              <th>種別</th><th>メモ</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="accBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FOLDER MODAL ═══ -->
+<div class="modal-overlay" id="folderModal" onclick="onOverlayClick(event,'folderModal')">
+  <div class="modal">
+    <div class="modal-title" id="folderModalTitle">フォルダを追加</div>
+    <div class="form-group">
+      <label class="form-label">フォルダ名 <span style="color:var(--red)">*</span></label>
+      <input class="form-input" id="fName" type="text" placeholder="例: 業務ツール">
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ・説明</label>
+      <textarea class="form-textarea" id="fMemo" placeholder="このフォルダについての説明（サイドバーにプレビュー表示されます）"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">カラー</label>
+      <div class="color-swatches" id="colorSwatches"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('folderModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveFolder()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BOOKMARK MODAL ═══ -->
+<div class="modal-overlay" id="bookmarkModal" onclick="onOverlayClick(event,'bookmarkModal')">
+  <div class="modal">
+    <div class="modal-title" id="bmModalTitle">ブックマークを追加</div>
+    <div class="form-group">
+      <label class="form-label">名前 <span style="color:var(--red)">*</span></label>
+      <input class="form-input" id="bmName" type="text" placeholder="例: Gmail">
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL <span style="color:var(--red)">*</span></label>
+      <input class="form-input" id="bmUrl" type="text" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">フォルダ</label>
+      <select class="form-select" id="bmFolderSel"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">タグ <span style="color:var(--text-dim);font-weight:400">（カンマ区切り）</span></label>
+      <input class="form-input" id="bmTags" type="text" placeholder="例: メール, Google, 業務">
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea class="form-textarea" id="bmMemo" placeholder="このブックマークについてのメモ..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('bookmarkModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ACCOUNT MODAL ═══ -->
+<div class="modal-overlay" id="accountModal" onclick="onOverlayClick(event,'accountModal')">
+  <div class="modal">
+    <div class="modal-title" id="accModalTitle">アカウントを追加</div>
+    <div class="form-group">
+      <label class="form-label">サイト名 <span style="color:var(--red)">*</span></label>
+      <input class="form-input" id="acSite" type="text" placeholder="例: GitHub">
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL</label>
+      <input class="form-input" id="acUrl" type="text" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">アカウント名 <span style="color:var(--red)">*</span></label>
+      <input class="form-input" id="acName" type="text" placeholder="例: user@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">種別</label>
+      <select class="form-select" id="acType">
+        <option value="personal">個人</option>
+        <option value="business">業務</option>
+        <option value="other">その他</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">メモ</label>
+      <textarea class="form-textarea" id="acMemo" placeholder="このアカウントで使えるサービス、注意点など..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('accountModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveAccount()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────
+//  Themes
+// ─────────────────────────────────────
+const THEMES = {
+  dark: {
+    name: 'ダーク', emoji: '🌑',
+    preview: ['#0d0d0d', '#4488ff'],
+    vars: {
+      '--bg':'#0d0d0d','--surface':'#111111','--card':'#171717','--card-hover':'#1e1e1e',
+      '--border':'#242424','--border-light':'#2e2e2e',
+      '--accent':'#4488ff','--accent-glow':'rgba(68,136,255,0.18)',
+      '--text':'#e2e2e2','--text-sub':'#888888','--text-dim':'#444444',
+      '--modal-bg':'#1c1c1c','--logo-color':'#00ffff','--logo-glow':'rgba(0,255,255,0.5)',
+    }
+  },
+  light: {
+    name: 'ライト', emoji: '☀️',
+    preview: ['#f4f4f4', '#2266dd'],
+    vars: {
+      '--bg':'#f4f4f4','--surface':'#ffffff','--card':'#ffffff','--card-hover':'#eeeeee',
+      '--border':'#e0e0e0','--border-light':'#cccccc',
+      '--accent':'#2266dd','--accent-glow':'rgba(34,102,221,0.12)',
+      '--text':'#1a1a1a','--text-sub':'#666666','--text-dim':'#aaaaaa',
+      '--modal-bg':'#ffffff','--logo-color':'#2266dd','--logo-glow':'rgba(34,102,221,0.25)',
+    }
+  },
+  eyecare: {
+    name: 'アイケア', emoji: '🌿',
+    preview: ['#1e1e16', '#88bb44'],
+    vars: {
+      '--bg':'#1e1e16','--surface':'#252519','--card':'#2c2c1e','--card-hover':'#333325',
+      '--border':'#3a3a28','--border-light':'#4a4a36',
+      '--accent':'#88bb44','--accent-glow':'rgba(136,187,68,0.15)',
+      '--text':'#d8d8a8','--text-sub':'#909070','--text-dim':'#505038',
+      '--modal-bg':'#282820','--logo-color':'#aabb66','--logo-glow':'rgba(170,187,102,0.4)',
+    }
+  },
+  midnight: {
+    name: 'ミッドナイト', emoji: '🌊',
+    preview: ['#060d1a', '#3399ff'],
+    vars: {
+      '--bg':'#060d1a','--surface':'#0a1428','--card':'#0f1e38','--card-hover':'#152540',
+      '--border':'#1a2d4a','--border-light':'#243c60',
+      '--accent':'#3399ff','--accent-glow':'rgba(51,153,255,0.2)',
+      '--text':'#c8deff','--text-sub':'#6688aa','--text-dim':'#334466',
+      '--modal-bg':'#0c1830','--logo-color':'#66bbff','--logo-glow':'rgba(102,187,255,0.5)',
+    }
+  },
+  neon: {
+    name: 'ネオン', emoji: '⚡',
+    preview: ['#050505', '#ff00ff'],
+    vars: {
+      '--bg':'#050505','--surface':'#0a0a0a','--card':'#111111','--card-hover':'#191919',
+      '--border':'#1f1f1f','--border-light':'#2f2f2f',
+      '--accent':'#ff00ff','--accent-glow':'rgba(255,0,255,0.22)',
+      '--text':'#eeeeee','--text-sub':'#888888','--text-dim':'#444444',
+      '--modal-bg':'#111111','--logo-color':'#00ffff','--logo-glow':'rgba(0,255,255,0.7)',
+    }
+  },
+  cyberpunk: {
+    name: 'サイバーパンク', emoji: '🤖',
+    preview: ['#0a0800', '#ffdd00'],
+    vars: {
+      '--bg':'#0a0800','--surface':'#141000','--card':'#1c1800','--card-hover':'#242000',
+      '--border':'#302800','--border-light':'#404000',
+      '--accent':'#ffdd00','--accent-glow':'rgba(255,221,0,0.18)',
+      '--text':'#eecc88','--text-sub':'#887744','--text-dim':'#443300',
+      '--modal-bg':'#181400','--logo-color':'#ffee00','--logo-glow':'rgba(255,238,0,0.6)',
+    }
+  },
+  forest: {
+    name: 'フォレスト', emoji: '🌲',
+    preview: ['#080f08', '#44cc66'],
+    vars: {
+      '--bg':'#080f08','--surface':'#0d160d','--card':'#131f13','--card-hover':'#192619',
+      '--border':'#1e2e1e','--border-light':'#2a3e2a',
+      '--accent':'#44cc66','--accent-glow':'rgba(68,204,102,0.16)',
+      '--text':'#c8eec8','--text-sub':'#6a9a6a','--text-dim':'#3a5a3a',
+      '--modal-bg':'#111a11','--logo-color':'#66ee88','--logo-glow':'rgba(102,238,136,0.5)',
+    }
+  },
+  sunset: {
+    name: 'サンセット', emoji: '🌅',
+    preview: ['#0f0808', '#ff6644'],
+    vars: {
+      '--bg':'#0f0808','--surface':'#1a0f0a','--card':'#241410','--card-hover':'#2e1a14',
+      '--border':'#3a2018','--border-light':'#4a2a20',
+      '--accent':'#ff6644','--accent-glow':'rgba(255,102,68,0.18)',
+      '--text':'#ffd0a0','--text-sub':'#aa7755','--text-dim':'#553322',
+      '--modal-bg':'#1e1008','--logo-color':'#ff9966','--logo-glow':'rgba(255,153,102,0.5)',
+    }
+  },
+  mono: {
+    name: 'モノクロ', emoji: '◼',
+    preview: ['#000000', '#cccccc'],
+    vars: {
+      '--bg':'#000000','--surface':'#0a0a0a','--card':'#141414','--card-hover':'#1c1c1c',
+      '--border':'#2a2a2a','--border-light':'#3a3a3a',
+      '--accent':'#cccccc','--accent-glow':'rgba(200,200,200,0.12)',
+      '--text':'#f0f0f0','--text-sub':'#888888','--text-dim':'#444444',
+      '--modal-bg':'#111111','--logo-color':'#eeeeee','--logo-glow':'rgba(255,255,255,0.25)',
+    }
+  },
+  sakura: {
+    name: 'さくら', emoji: '🌸',
+    preview: ['#1a0f14', '#ff88bb'],
+    vars: {
+      '--bg':'#1a0f14','--surface':'#24131c','--card':'#2e1824','--card-hover':'#38202e',
+      '--border':'#3e2233','--border-light':'#522d44',
+      '--accent':'#ff88bb','--accent-glow':'rgba(255,136,187,0.18)',
+      '--text':'#ffe0ee','--text-sub':'#aa7788','--text-dim':'#553344',
+      '--modal-bg':'#261420','--logo-color':'#ffaacc','--logo-glow':'rgba(255,170,204,0.5)',
+    }
+  },
+};
+
+let currentThemeId = localStorage.getItem('kaneko_theme') || 'dark';
+
+function applyTheme(id) {
+  const t = THEMES[id];
+  if (!t) return;
+  const root = document.documentElement;
+  Object.entries(t.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  currentThemeId = id;
+  localStorage.setItem('kaneko_theme', id);
+  renderThemeGrid();
+}
+
+function toggleThemePicker() {
+  document.getElementById('themeDropdown').classList.toggle('show');
+}
+
+function renderThemeGrid() {
+  document.getElementById('themeGrid').innerHTML = Object.entries(THEMES).map(([id, t]) =>
+    `<div class="theme-card${id===currentThemeId?' active':''}" onclick="applyTheme('${id}');toggleThemePicker()">
+      <div class="theme-preview" style="background:linear-gradient(135deg,${t.preview[0]} 50%,${t.preview[1]} 50%)"></div>
+      <span>${t.emoji} ${t.name}</span>
+    </div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────
+//  Data
+// ─────────────────────────────────────
+const STORAGE_KEY = 'kaneko_memo_v1';
+const COLORS = ['#4488ff','#00e87a','#ff4444','#ffaa00','#aa44ff','#ff44aa','#00ccee','#ff8844','#44ddaa'];
+const TYPE_LABELS = { personal: '個人', business: '業務', other: 'その他' };
+const FAVICON = domain => `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+
+let db = loadDB();
+let selectedFolderId = null;
+let editingFolderId  = null;
+let editingBmId      = null;
+let editingAccId     = null;
+let pickedColor      = COLORS[0];
+
+function loadDB() {
+  // 旧キー (myhub_v1) からの移行
+  const legacy = localStorage.getItem('myhub_v1');
+  if (legacy) {
+    try {
+      const d = JSON.parse(legacy);
+      localStorage.setItem(STORAGE_KEY, legacy);
+      localStorage.removeItem('myhub_v1');
+      return d;
+    } catch {}
+  }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || emptyDB(); }
+  catch { return emptyDB(); }
+}
+function emptyDB() { return { folders: [], bookmarks: [], accounts: [] }; }
+function saveDB() { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
+function uid() { return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36); }
+function getDomain(url) { try { return new URL(url).hostname; } catch { return null; } }
+function q() { return document.getElementById('searchInput').value.toLowerCase().trim(); }
+
+// ─────────────────────────────────────
+//  Tab
+// ─────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===(tab==='bm'?0:1)));
+  document.getElementById('bmPanel').classList.toggle('active', tab==='bm');
+  document.getElementById('accPanel').classList.toggle('active', tab==='acc');
+}
+
+// ─────────────────────────────────────
+//  Render
+// ─────────────────────────────────────
+function renderAll() { renderFolders(); renderBookmarks(); renderAccounts(); }
+
+function renderFolders() {
+  document.getElementById('folderAllBtn').classList.toggle('active', selectedFolderId===null);
+  document.getElementById('folderList').innerHTML = db.folders.map(f => {
+    const count = db.bookmarks.filter(b=>b.folderId===f.id).length;
+    return `<div class="folder-item${selectedFolderId===f.id?' active':''}" onclick="selectFolder('${f.id}')">
+      <span class="folder-dot" style="background:${f.color}"></span>
+      <div class="folder-label">
+        <div class="folder-name-text">${esc(f.name)}</div>
+        ${f.memo?`<div class="folder-memo-preview">${esc(f.memo)}</div>`:''}
+      </div>
+      <span class="folder-count-badge">${count}</span>
+      <div class="folder-actions-inline">
+        <button class="folder-action-btn" onclick="event.stopPropagation();openFolderModal('${f.id}')">✏</button>
+        <button class="folder-action-btn del" onclick="event.stopPropagation();deleteFolder('${f.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBookmarks() {
+  const query = q();
+  let bms = db.bookmarks;
+  if (selectedFolderId) bms = bms.filter(b=>b.folderId===selectedFolderId);
+  if (query) bms = bms.filter(b=>
+    b.name.toLowerCase().includes(query) ||
+    (b.url||'').toLowerCase().includes(query) ||
+    (b.memo||'').toLowerCase().includes(query) ||
+    (b.tags||[]).some(t=>t.toLowerCase().includes(query))
+  );
+  const folder = db.folders.find(f=>f.id===selectedFolderId);
+  document.getElementById('contentTitle').textContent = folder?folder.name:'すべてのブックマーク';
+  const memoEl = document.getElementById('contentMemo');
+  if (folder?.memo) { memoEl.textContent=folder.memo; memoEl.classList.remove('hidden'); }
+  else { memoEl.classList.add('hidden'); }
+
+  const grid = document.getElementById('bmGrid');
+  if (!bms.length) {
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🔖</div>
+      <div class="empty-msg">ブックマークがありません<br><span style="font-size:12px">右上の「＋ ブックマーク追加」から追加できます</span></div>
+    </div>`; return;
+  }
+  grid.innerHTML = bms.map(b=>{
+    const domain = getDomain(b.url);
+    const tags = (b.tags||[]).filter(Boolean).map(t=>`<span class="bm-tag">${esc(t)}</span>`).join('');
+    return `<div class="bm-card" onclick="openUrl('${esc(b.url)}')">
+      <div class="bm-card-actions-overlay">
+        <button class="bm-card-action" onclick="event.stopPropagation();openBookmarkModal('${b.id}')">✏</button>
+        <button class="bm-card-action del" onclick="event.stopPropagation();deleteBm('${b.id}')">✕</button>
+      </div>
+      <div class="bm-card-top">
+        ${domain?`<img class="bm-favicon" src="${FAVICON(domain)}" onerror="this.outerHTML='<span class=bm-favicon-placeholder>🔗</span>'">`
+                :'<span class="bm-favicon-placeholder">🔗</span>'}
+        <span class="bm-card-name">${esc(b.name)}</span>
+      </div>
+      <div class="bm-card-url">${esc(b.url||'')}</div>
+      ${b.memo?`<div class="bm-card-memo">${esc(b.memo)}</div>`:''}
+      ${tags?`<div class="bm-card-tags">${tags}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderAccounts() {
+  const query = q();
+  let accs = db.accounts;
+  if (query) accs = accs.filter(a=>
+    a.site.toLowerCase().includes(query) ||
+    a.accountName.toLowerCase().includes(query) ||
+    (a.url||'').toLowerCase().includes(query) ||
+    (a.memo||'').toLowerCase().includes(query)
+  );
+  const body = document.getElementById('accBody');
+  if (!accs.length) {
+    body.innerHTML=`<tr><td colspan="6"><div class="empty-state">
+      <div class="empty-icon">👤</div>
+      <div class="empty-msg">アカウントがありません<br><span style="font-size:12px">右上の「＋ アカウント追加」から追加できます</span></div>
+    </div></td></tr>`; return;
+  }
+  body.innerHTML = accs.map(a=>{
+    const domain = getDomain(a.url);
+    return `<tr>
+      <td><div class="acc-site-cell">
+        ${domain?`<img class="acc-favicon" src="${FAVICON(domain)}" onerror="this.style.display='none'">`:'' }
+        <strong>${esc(a.site)}</strong>
+      </div></td>
+      <td>${a.url?`<a class="acc-url-link" href="${esc(a.url)}" target="_blank">${esc(a.url)}</a>`:'—'}</td>
+      <td>${esc(a.accountName)}</td>
+      <td><span class="acc-type-chip ${a.type||'personal'}">${TYPE_LABELS[a.type]||a.type}</span></td>
+      <td class="acc-memo-cell" title="${esc(a.memo||'')}">${esc(a.memo||'—')}</td>
+      <td>
+        <button class="tbl-action-btn" onclick="openAccountModal('${a.id}')">編集</button>
+        <button class="tbl-action-btn del" onclick="deleteAcc('${a.id}')">削除</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────
+//  Folder CRUD
+// ─────────────────────────────────────
+function selectFolder(id) { selectedFolderId=id; renderFolders(); renderBookmarks(); }
+
+function openFolderModal(id) {
+  editingFolderId = id||null;
+  const f = id ? db.folders.find(x=>x.id===id) : null;
+  document.getElementById('folderModalTitle').textContent = id?'フォルダを編集':'フォルダを追加';
+  document.getElementById('fName').value = f?.name||'';
+  document.getElementById('fMemo').value = f?.memo||'';
+  pickedColor = f?.color||COLORS[0];
+  renderColorSwatches();
+  openModal('folderModal');
+  setTimeout(()=>document.getElementById('fName').focus(),50);
+}
+
+function saveFolder() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { document.getElementById('fName').focus(); return; }
+  const memo = document.getElementById('fMemo').value.trim();
+  if (editingFolderId) {
+    const f = db.folders.find(x=>x.id===editingFolderId);
+    if (f) Object.assign(f,{name,memo,color:pickedColor});
+  } else {
+    db.folders.push({id:uid(),name,memo,color:pickedColor});
+  }
+  saveDB(); closeModal('folderModal'); renderAll();
+}
+
+function deleteFolder(id) {
+  if (!confirm('フォルダを削除しますか？（中のブックマークもすべて削除されます）')) return;
+  db.bookmarks = db.bookmarks.filter(b=>b.folderId!==id);
+  db.folders   = db.folders.filter(f=>f.id!==id);
+  if (selectedFolderId===id) selectedFolderId=null;
+  saveDB(); renderAll();
+}
+
+// ─────────────────────────────────────
+//  Bookmark CRUD
+// ─────────────────────────────────────
+function openBookmarkModal(id) {
+  editingBmId = id||null;
+  const b = id ? db.bookmarks.find(x=>x.id===id) : null;
+  document.getElementById('bmModalTitle').textContent = id?'ブックマークを編集':'ブックマークを追加';
+  document.getElementById('bmName').value = b?.name||'';
+  document.getElementById('bmUrl').value  = b?.url||'';
+  document.getElementById('bmTags').value = (b?.tags||[]).join(', ');
+  document.getElementById('bmMemo').value = b?.memo||'';
+  const sel = document.getElementById('bmFolderSel');
+  sel.innerHTML = '<option value="">── フォルダなし ──</option>' +
+    db.folders.map(f=>`<option value="${f.id}"${(b?b.folderId===f.id:selectedFolderId===f.id)?' selected':''}>${esc(f.name)}</option>`).join('');
+  openModal('bookmarkModal');
+  setTimeout(()=>document.getElementById('bmName').focus(),50);
+}
+
+function saveBookmark() {
+  const name = document.getElementById('bmName').value.trim();
+  const url  = document.getElementById('bmUrl').value.trim();
+  if (!name||!url) { alert('名前とURLは必須です'); return; }
+  const tags     = document.getElementById('bmTags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const memo     = document.getElementById('bmMemo').value.trim();
+  const folderId = document.getElementById('bmFolderSel').value||null;
+  if (editingBmId) {
+    const b = db.bookmarks.find(x=>x.id===editingBmId);
+    if (b) Object.assign(b,{name,url,tags,memo,folderId});
+  } else {
+    db.bookmarks.push({id:uid(),name,url,tags,memo,folderId});
+  }
+  saveDB(); closeModal('bookmarkModal'); renderAll();
+}
+
+function deleteBm(id) {
+  if (!confirm('このブックマークを削除しますか？')) return;
+  db.bookmarks = db.bookmarks.filter(b=>b.id!==id);
+  saveDB(); renderAll();
+}
+
+// ─────────────────────────────────────
+//  Account CRUD
+// ─────────────────────────────────────
+function openAccountModal(id) {
+  editingAccId = id||null;
+  const a = id ? db.accounts.find(x=>x.id===id) : null;
+  document.getElementById('accModalTitle').textContent = id?'アカウントを編集':'アカウントを追加';
+  document.getElementById('acSite').value = a?.site||'';
+  document.getElementById('acUrl').value  = a?.url||'';
+  document.getElementById('acName').value = a?.accountName||'';
+  document.getElementById('acType').value = a?.type||'personal';
+  document.getElementById('acMemo').value = a?.memo||'';
+  openModal('accountModal');
+  setTimeout(()=>document.getElementById('acSite').focus(),50);
+}
+
+function saveAccount() {
+  const site = document.getElementById('acSite').value.trim();
+  const accountName = document.getElementById('acName').value.trim();
+  if (!site||!accountName) { alert('サイト名とアカウント名は必須です'); return; }
+  const data = {
+    site, url:document.getElementById('acUrl').value.trim(),
+    accountName, type:document.getElementById('acType').value,
+    memo:document.getElementById('acMemo').value.trim()
+  };
+  if (editingAccId) {
+    const a = db.accounts.find(x=>x.id===editingAccId);
+    if (a) Object.assign(a,data);
+  } else {
+    db.accounts.push({id:uid(),...data});
+  }
+  saveDB(); closeModal('accountModal'); renderAll();
+}
+
+function deleteAcc(id) {
+  if (!confirm('このアカウントを削除しますか？')) return;
+  db.accounts = db.accounts.filter(a=>a.id!==id);
+  saveDB(); renderAll();
+}
+
+// ─────────────────────────────────────
+//  Modal helpers
+// ─────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function onOverlayClick(e,id) { if (e.target===e.currentTarget) closeModal(id); }
+
+// ─────────────────────────────────────
+//  Color picker
+// ─────────────────────────────────────
+function renderColorSwatches() {
+  document.getElementById('colorSwatches').innerHTML = COLORS.map(c=>
+    `<div class="color-swatch${c===pickedColor?' selected':''}" style="background:${c}" onclick="pickedColor='${c}';renderColorSwatches()"></div>`
+  ).join('');
+}
+
+// ─────────────────────────────────────
+//  Import / Export
+// ─────────────────────────────────────
+function exportData() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
+  a.download = `kaneko_memo_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data.bookmarks)&&Array.isArray(data.folders)&&Array.isArray(data.accounts)) {
+        if (confirm('現在のデータを上書きしてインポートしますか？')) {
+          db=data; saveDB(); renderAll();
+          alert(`インポート完了\nフォルダ: ${db.folders.length} / ブックマーク: ${db.bookmarks.length} / アカウント: ${db.accounts.length}`);
+        }
+      } else { alert('このファイルは 金子メモ のバックアップ形式ではありません'); }
+    } catch { alert('JSONの解析に失敗しました'); }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────
+//  Keyboard / click outside
+// ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') {
+    document.querySelectorAll('.modal-overlay.show').forEach(m=>m.classList.remove('show'));
+    document.getElementById('themeDropdown').classList.remove('show');
+  }
+});
+document.addEventListener('click', e => {
+  const dropdown = document.getElementById('themeDropdown');
+  const btn = document.getElementById('themeBtn');
+  if (!dropdown.contains(e.target) && e.target!==btn) dropdown.classList.remove('show');
+});
+
+// ─────────────────────────────────────
+//  Misc
+// ─────────────────────────────────────
+function openUrl(url) { if (url) window.open(url,'_blank'); }
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────
+//  Boot
+// ─────────────────────────────────────
+applyTheme(currentThemeId);
+renderColorSwatches();
+renderAll();
+</script>
+</body>
+</html>
