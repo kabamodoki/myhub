@@ -468,7 +468,16 @@ tr:hover td { background: var(--card); }
 .acc-type-chip.personal { background: rgba(0,232,122,0.1); color: #00cc66; }
 .acc-type-chip.business { background: rgba(68,136,255,0.1); color: #4488ff; }
 .acc-type-chip.other    { background: rgba(170,68,255,0.1); color: #aa44ff; }
-.acc-memo-cell { color: var(--text-sub); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-memo-cell { color: var(--text-sub); font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-cell { display: flex; align-items: center; gap: 6px; }
+.pw-masked { font-size: 13px; color: var(--text-dim); letter-spacing: 2px; }
+.pw-reveal-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: 11px; transition: all 0.1s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pw-reveal-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pw-text { font-size: 12px; font-family: monospace; color: var(--text); word-break: break-all; }
 .tbl-action-btn {
   background: transparent; border: 1px solid var(--border); color: var(--text-sub);
   cursor: pointer; padding: 3px 9px; border-radius: 4px; font-size: 11px;
@@ -645,7 +654,7 @@ tr:hover td { background: var(--card); }
           <thead>
             <tr>
               <th>サイト</th><th>URL</th><th>アカウント名</th>
-              <th>種別</th><th>メモ</th><th></th>
+              <th>パスワード</th><th>種別</th><th>メモ</th><th></th>
             </tr>
           </thead>
           <tbody id="accBody"></tbody>
@@ -735,6 +744,13 @@ tr:hover td { background: var(--card); }
     <div class="form-group">
       <label class="form-label">アカウント名 <span style="color:var(--red)">*</span></label>
       <input class="form-input" id="acName" type="text" placeholder="例: user@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">パスワード <span style="color:var(--text-dim);font-weight:400">（ローカル保存・閲覧用メモとして）</span></label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="form-input" id="acPassword" type="password" placeholder="パスワードを入力..." style="flex:1">
+        <button type="button" style="background:var(--card);border:1px solid var(--border);color:var(--text-sub);cursor:pointer;padding:7px 10px;border-radius:6px;font-size:14px;flex-shrink:0;transition:all 0.1s" onmousedown="togglePwInput()" title="表示/非表示">👁</button>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">種別</label>
@@ -1088,6 +1104,13 @@ function renderAccounts() {
   }
   body.innerHTML = accs.map(a=>{
     const domain = getDomain(a.url);
+    const pwCell = a.password
+      ? `<div class="pw-cell">
+           <span class="pw-masked" id="pw-mask-${a.id}">●●●●●●</span>
+           <span class="pw-text" id="pw-text-${a.id}" style="display:none">${esc(a.password)}</span>
+           <button class="pw-reveal-btn" onclick="togglePwCell('${a.id}')">表示</button>
+         </div>`
+      : '<span style="color:var(--text-dim)">—</span>';
     return `<tr>
       <td><div class="acc-site-cell">
         ${domain?`<img class="acc-favicon" src="${FAVICON(domain)}" onerror="this.style.display='none'">`:'' }
@@ -1095,6 +1118,7 @@ function renderAccounts() {
       </div></td>
       <td>${a.url?`<a class="acc-url-link" href="${esc(a.url)}" target="_blank">${esc(a.url)}</a>`:'—'}</td>
       <td>${esc(a.accountName)}</td>
+      <td>${pwCell}</td>
       <td><span class="acc-type-chip ${a.type||'personal'}">${TYPE_LABELS[a.type]||a.type}</span></td>
       <td class="acc-memo-cell" title="${esc(a.memo||'')}">${esc(a.memo||'—')}</td>
       <td>
@@ -1193,11 +1217,13 @@ function openAccountModal(id) {
   editingAccId = id||null;
   const a = id ? db.accounts.find(x=>x.id===id) : null;
   document.getElementById('accModalTitle').textContent = id?'アカウントを編集':'アカウントを追加';
-  document.getElementById('acSite').value = a?.site||'';
-  document.getElementById('acUrl').value  = a?.url||'';
-  document.getElementById('acName').value = a?.accountName||'';
-  document.getElementById('acType').value = a?.type||'personal';
-  document.getElementById('acMemo').value = a?.memo||'';
+  document.getElementById('acSite').value     = a?.site||'';
+  document.getElementById('acUrl').value      = a?.url||'';
+  document.getElementById('acName').value     = a?.accountName||'';
+  document.getElementById('acPassword').value = a?.password||'';
+  document.getElementById('acPassword').type  = 'password';
+  document.getElementById('acType').value     = a?.type||'personal';
+  document.getElementById('acMemo').value     = a?.memo||'';
   openModal('accountModal');
   setTimeout(()=>document.getElementById('acSite').focus(),50);
 }
@@ -1208,7 +1234,8 @@ function saveAccount() {
   if (!site||!accountName) { alert('サイト名とアカウント名は必須です'); return; }
   const data = {
     site, url:document.getElementById('acUrl').value.trim(),
-    accountName, type:document.getElementById('acType').value,
+    accountName, password:document.getElementById('acPassword').value,
+    type:document.getElementById('acType').value,
     memo:document.getElementById('acMemo').value.trim()
   };
   if (editingAccId) {
@@ -1269,6 +1296,24 @@ function importData(e) {
     e.target.value='';
   };
   reader.readAsText(file);
+}
+
+// ─────────────────────────────────────
+//  Password helpers
+// ─────────────────────────────────────
+function togglePwCell(id) {
+  const mask = document.getElementById('pw-mask-'+id);
+  const text = document.getElementById('pw-text-'+id);
+  const btn  = mask.closest('.pw-cell').querySelector('.pw-reveal-btn');
+  const showing = text.style.display !== 'none';
+  mask.style.display = showing ? '' : 'none';
+  text.style.display = showing ? 'none' : '';
+  btn.textContent = showing ? '表示' : '隠す';
+}
+
+function togglePwInput() {
+  const inp = document.getElementById('acPassword');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
 // ─────────────────────────────────────
